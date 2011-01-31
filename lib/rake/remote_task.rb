@@ -170,10 +170,11 @@ class Rake::RemoteTask < Rake::Task
   # Use ssh to execute +command+ on target_host. If +command+ uses sudo, the
   # sudo password will be prompted for then saved for subsequent sudo commands.
 
-  def run command
+  def run(command, opts = {})
     command = "cd #{target_dir} && #{command}" if target_dir
     cmd     = [ssh_cmd, ssh_flags, target_host, command].flatten
     result  = []
+    opts    = {:stdout => false}.merge(opts)
 
     trace = [ssh_cmd, ssh_flags, target_host, "'#{command}'"].flatten.join(' ')
     warn trace if $TRACE
@@ -206,7 +207,10 @@ class Rake::RemoteTask < Rake::Task
         end
 
         data = stream.readpartial(1024)
-        out_stream[stream].write data
+        if (opts[:stdout] and stream === out) or stream != out
+          out_stream[stream].write data
+        end
+        
 
         if stream == err and data =~ sudo_prompt then
           inn.puts sudo_password
